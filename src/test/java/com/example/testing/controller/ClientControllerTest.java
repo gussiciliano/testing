@@ -11,7 +11,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.example.testing.entity.Client;
-import com.example.testing.repository.IClientRepository;
+import com.example.testing.service.IClientService;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest
@@ -19,10 +19,15 @@ import com.example.testing.repository.IClientRepository;
 public class ClientControllerTest {
 	
     @Autowired
-    private IClientRepository clientRepository;
+    private IClientService clientService;
 	
 	@Test
-	public void when_index_returnOk() {
+	public void when_index_returnOKWithValues() {
+		assertTrue(true);
+	}
+	
+	@Test
+	public void when_index_returnOKWithoutValues() {
 		assertTrue(true);
 	}
 	
@@ -35,8 +40,8 @@ public class ClientControllerTest {
 		client.setDocument(12345678);
 	    
 	    // when (Controller simulation)
-		clientRepository.save(client);
-		Client clientNew = clientRepository.findById(1).get();
+		clientService.insertOrUpdate(client);
+		Client clientNew = clientService.findById(1).get();
 
 	    // then
 		assertThat(clientNew.getName()).isEqualTo(client.getName());

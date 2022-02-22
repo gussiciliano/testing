@@ -13,6 +13,8 @@ public interface IClientService {
 	
 	public Optional<Client> findById(int id);
 	
-	public boolean remove(int id);
+	public Optional<Client> findByDocument(int document);
+	
+	public void remove(int id);
 }
 

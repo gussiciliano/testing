@@ -2,7 +2,10 @@ package com.example.testing.controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -28,42 +31,76 @@ public class ClientController {
 	@Qualifier("clientService")
 	private IClientService clientService;
 	
+	private ModelMapper modelMapper = new ModelMapper();
+	
 	//GET /clients
 	@GetMapping("")
-	public ResponseEntity<List<Client>> index() {
-		List<ClientDTO> clientsDTO = new ArrayList<ClientDTO>(); //TODO
-		List<Client> clients = clientService.findAll();
-		return new ResponseEntity<List<Client>>(clients, HttpStatus.OK);
+	public ResponseEntity<List<ClientDTO>> index() {
+		List<ClientDTO> clientsDTO = new ArrayList<ClientDTO>();
+		clientsDTO = clientService.findAll()
+						.stream()
+						.map(client -> modelMapper.map(client, ClientDTO.class))
+						.collect(Collectors.toList());
+		return new ResponseEntity<List<ClientDTO>>(clientsDTO, HttpStatus.OK);
 	}
 	
 	//POST /clients
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@PostMapping("")
-	public ResponseEntity<Client> create(@RequestBody Client client) {
-		clientService.insertOrUpdate(client);
-		return new ResponseEntity<Client>(client, HttpStatus.CREATED);
+	public ResponseEntity create(@RequestBody Client client) {
+		if(client == null) return new ResponseEntity<String>("client does not exists", HttpStatus.BAD_REQUEST);
+		Optional<Client> cli = clientService.findByDocument(client.getDocument());
+		if(cli.isPresent()) return new ResponseEntity<String>("duplicated document", HttpStatus.BAD_REQUEST);
+		try {
+			clientService.insertOrUpdate(client);
+		} catch (Exception e) {
+			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		return new ResponseEntity(modelMapper.map(client, ClientDTO.class), HttpStatus.CREATED);
 	}
 	
 	//GET /clients/:id
+	@SuppressWarnings("rawtypes")
 	@GetMapping("/{id}")
-	public ResponseEntity<Client> get(@PathVariable("id") int id) {
-		Client client = clientService.findById(id).get();
-		return new ResponseEntity<Client>(client, HttpStatus.OK);
+	public ResponseEntity get(@PathVariable("id") int id) {
+		if (id < 1) return new ResponseEntity<String>("id could not be less than 1", HttpStatus.BAD_REQUEST);
+		Optional<Client> client = clientService.findById(id);
+		return !client.isPresent()
+				? new ResponseEntity<String>("", HttpStatus.OK)
+				: new ResponseEntity<ClientDTO>(modelMapper.map(client.get(), ClientDTO.class), HttpStatus.OK);
 	}
 	
 	//PUT /clients/:id
+	@SuppressWarnings("rawtypes")
 	@PutMapping("/{id}")
-	public ResponseEntity<Client> update(@PathVariable("id") int id, @RequestBody Client client) {
-		Client clientAux = clientService.findById(id).get();
-		clientAux.setName(client.getName());
-		clientAux.setDocument(client.getDocument());
-		clientService.insertOrUpdate(clientAux);
-		return new ResponseEntity<Client>(clientAux, HttpStatus.OK);
+	public ResponseEntity update(@PathVariable("id") int id, @RequestBody Client client) {
+		if (id < 1) return new ResponseEntity<String>("id could not be less than 1", HttpStatus.BAD_REQUEST);
+		Optional<Client> newClient = clientService.findById(id);
+		if (!newClient.isPresent()) return new ResponseEntity<String>("this client does not exists", HttpStatus.BAD_REQUEST);
+		
+		//possible changes (it will be better do it this into an internal Client Method
+		newClient.get().setName(client.getName());
+		
+		try {
+			clientService.insertOrUpdate(newClient.get());
+		} catch (Exception e) {
+			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
+		return new ResponseEntity<ClientDTO>(modelMapper.map(newClient.get(), ClientDTO.class), HttpStatus.OK);
 	}
 	
 	//DELETE /clients/:id
 	@DeleteMapping("/{id}")
 	public ResponseEntity<String> delete(@PathVariable("id") int id) {
-		clientService.remove(id);
+		if (id < 1) return new ResponseEntity<String>("id could not be less than 1", HttpStatus.BAD_REQUEST);
+		
+		try {
+			clientService.remove(id);
+		} catch (Exception e) {
+			return new ResponseEntity<String>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+		
 		return new ResponseEntity<String>("ok", HttpStatus.OK);
 	}
 }

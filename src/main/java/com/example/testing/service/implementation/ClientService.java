@@ -33,12 +33,12 @@ public class ClientService implements IClientService {
 	}
 	
 	@Override
-	public boolean remove(int id) {
-		try {
-			clientRepository.deleteById(id);
-			return true;
-		}catch (Exception e) {
-			return false;
-		}
+	public Optional<Client> findByDocument(int document) {
+		return clientRepository.findByDocument(document);
+	}
+	
+	@Override
+	public void remove(int id) {
+		clientRepository.deleteById(id);
 	}
 }
